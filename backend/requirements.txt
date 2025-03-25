@@ -28,3 +28,7 @@ gunicorn==21.2.0
 
 
 flake8==6.1.0
+
+django-filter==23.5
+
+drf_extra_fields==3.4.0

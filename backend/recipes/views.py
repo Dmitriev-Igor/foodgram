@@ -6,12 +6,15 @@ from rest_framework.response import Response
 from .models import Recipe, ShoppingCart
 from .serializers import RecipeSerializer
 from .filters import RecipeFilter
+from django_filters.rest_framework import DjangoFilterBackend
+
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend]
     filterset_class = RecipeFilter
 
     def perform_create(self, serializer):

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import Subscription
+from django.contrib.auth.password_validation import validate_password
 
 User = get_user_model()
 
@@ -42,6 +43,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
+        password = serializers.CharField(write_only=True, validators=[validate_password])
         fields = ('email', 'username', 'password', 'first_name', 'last_name')
         extra_kwargs = {'password': {'write_only': True}}
 

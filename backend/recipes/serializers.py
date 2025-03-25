@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Recipe, RecipeIngredient, Tag, ShoppingCart
 from ingredients.serializers import IngredientSerializer
+from drf_extra_fields.fields import Base64ImageField
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -23,6 +24,7 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
 class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
+    image = Base64ImageField()
     author = serializers.PrimaryKeyRelatedField(
         read_only=True,
         default=serializers.CurrentUserDefault()

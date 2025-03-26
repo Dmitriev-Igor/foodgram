@@ -5,6 +5,8 @@ from django.db.models import Sum
 from django.http import HttpResponse
 from .models import Recipe, ShoppingCart
 from .serializers import RecipeSerializer
+from reportlab.pdfgen import canvas
+from io import BytesIO
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -51,3 +53,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
             for ing in ingredients
         )
         return HttpResponse(content, content_type='text/plain')
+
+    def generate_pdf(self, ingredients):
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer)
+        y = 800
+        for ing in ingredients:
+            p.drawString(
+                100, y, f"{ing['name']} ({ing['unit']}) - {ing['amount']}")
+            y -= 20
+        p.save()
+        return buffer.getvalue()

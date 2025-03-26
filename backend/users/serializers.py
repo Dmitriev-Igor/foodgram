@@ -1,52 +1,48 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Subscription
 from django.contrib.auth.password_validation import validate_password
+from users.models import Subscription
+from recipes.models import Recipe
 
 User = get_user_model()
 
+class RecipeMinifiedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
 
 class UserSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = (
-            'id',
-            'username',
-            'email',
-            'first_name',
-            'last_name',
-            'avatar',
-            'is_subscribed'
-        )
+        fields = ('id', 'username', 'email', 'first_name', 
+                 'last_name', 'avatar', 'is_subscribed')
 
     def get_is_subscribed(self, obj):
-        user = self.context['request'].user
-        if request and request.user.is_authenticated:
-            return Subscription.objects.filter(
-                user=request.user,
-                author=obj
-            ).exists()
-        return False
+        request = self.context.get('request')
+        return (request and request.user.is_authenticated and 
+                obj.following.filter(user=request.user).exists())
 
+    def get_avatar(self, obj):
+        return obj.avatar.url if obj.avatar else None
 
 class SubscriptionSerializer(serializers.ModelSerializer):
-    author = UserSerializer(read_only=True)
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+    is_subscribed = serializers.BooleanField(default=True)
 
-    class Meta:
-        model = Subscription
-        fields = ('author', 'created')
-        read_only_fields = ('created',)
-
-
-class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        password = serializers.CharField(write_only=True, validators=[validate_password])
-        fields = ('email', 'username', 'password', 'first_name', 'last_name')
-        extra_kwargs = {'password': {'write_only': True}}
+        fields = ('id', 'username', 'email', 'first_name',
+                 'last_name', 'is_subscribed', 'recipes', 'recipes_count')
 
-    def create(self, validated_data):
-        user = User.objects.create_user(**validated_data)
-        return user
+    def get_recipes(self, obj):
+        request = self.context.get('request')
+        limit = int(request.query_params.get('recipes_limit', 0)) if request else 0
+        recipes = obj.recipes.all()[:limit] if limit > 0 else obj.recipes.all()
+        return RecipeMinifiedSerializer(recipes, many=True).data
+
+    def get_recipes_count(self, obj):
+        return obj.recipes.count()

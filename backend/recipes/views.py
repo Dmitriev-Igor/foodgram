@@ -25,7 +25,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 user=request.user, recipe=recipe)
             if not created:
                 return Response({'error': 'Рецепт уже в избранном'}, status=status.HTTP_400_BAD_REQUEST)
-            # Используем сокращенный сериализатор
+
             serializer = RecipeMinifiedSerializer(instance=recipe)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 

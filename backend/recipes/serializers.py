@@ -3,6 +3,7 @@ from .models import Recipe, Tag, Ingredient, RecipeIngredient, ShoppingCart, Fav
 from users.serializers import UserSerializer
 from drf_spectacular.utils import extend_schema_field
 
+
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
@@ -75,7 +76,6 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
         recipe.tags.set(tags_ids)
 
-        # Исправленная структура ингредиентов: {id: N, amount: M}
         for ingredient_data in ingredients_data:
             RecipeIngredient.objects.create(
                 recipe=recipe,

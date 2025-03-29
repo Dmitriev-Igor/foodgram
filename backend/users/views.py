@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import Subscription, User
-from .serializers import SubscriptionSerializer, UserSerializer
+from .serializers import SubscriptionSerializer, UserSerializer, SetAvatarSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -57,7 +57,7 @@ class UserViewSet(viewsets.ModelViewSet):
         )
         return self.get_paginated_response(serializer.data)
 
-    @action(detail=False, methods=['put'], url_path='me/avatar', 
+    @action(detail=False, methods=['put'], url_path='me/avatar',
             permission_classes=[permissions.IsAuthenticated])
     def set_avatar(self, request):
         user = request.user

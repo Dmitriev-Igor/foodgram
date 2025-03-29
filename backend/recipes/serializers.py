@@ -1,5 +1,12 @@
 from rest_framework import serializers
-from .models import Recipe, Tag, Ingredient, RecipeIngredient, ShoppingCart, Favorite
+from .models import (
+    Recipe,
+    Tag,
+    Ingredient,
+    RecipeIngredient,
+    ShoppingCart,
+    Favorite,
+)
 from users.serializers import UserSerializer
 from drf_spectacular.utils import extend_schema_field
 
@@ -60,12 +67,18 @@ class RecipeSerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.BooleanField)
     def get_is_favorited(self, obj):
         user = self.context['request'].user
-        return user.is_authenticated and obj.in_favorites.filter(user=user).exists()
+        return (
+            user.is_authenticated
+            and obj.in_favorites.filter(user=user).exists()
+        )
 
     @extend_schema_field(serializers.BooleanField)
     def get_is_in_shopping_cart(self, obj):
         user = self.context['request'].user
-        return user.is_authenticated and obj.in_shopping_carts.filter(user=user).exists()
+        return (
+            user.is_authenticated
+            and obj.in_shopping_carts.filter(user=user).exists()
+        )
 
     def create(self, validated_data):
         ingredients_data = self.initial_data.get('ingredients', [])

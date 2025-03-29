@@ -56,3 +56,12 @@ class UserViewSet(viewsets.ModelViewSet):
             context={'request': request}
         )
         return self.get_paginated_response(serializer.data)
+
+    @action(detail=False, methods=['put'], url_path='me/avatar', 
+            permission_classes=[permissions.IsAuthenticated])
+    def set_avatar(self, request):
+        user = request.user
+        serializer = SetAvatarSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)

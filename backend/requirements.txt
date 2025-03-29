@@ -1,36 +1,16 @@
-# Основные зависимости Django
+# Основные
 Django==4.2.7
 djangorestframework==3.14.0
 django-filter==23.5
 Pillow==10.0.1
-
-# Аутентификация и авторизация
 djoser==2.2.0
-social-auth-app-django==5.2.0
-
-# Работа с базой данных
 psycopg2-binary==2.9.9
-
-# CORS для интеграции с фронтендом
 django-cors-headers==4.3.1
-
-# Документация API
-drf-yasg==1.21.7
-
-# Генерация PDF
 reportlab==4.0.4
-
-# Работа с окружением
 python-dotenv==1.0.0
-
-# Продакшен-зависимости
 gunicorn==21.2.0
-
-
-flake8==6.1.0
-
-django-filter==23.5
-
 drf_extra_fields==3.4.0
+drf-spectacular==0.27.1
 
-drf-spectacular
+# Для разработки (dev-requirements.txt)
+flake8==6.1.0

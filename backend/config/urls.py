@@ -10,7 +10,7 @@ from drf_spectacular.views import (
 )
 
 # Импорты ViewSets
-from recipes.views import RecipeViewSet
+from recipes.views import RecipeViewSet, IngredientViewSet
 from users.views import UserViewSet
 
 router = DefaultRouter()
@@ -18,6 +18,7 @@ router = DefaultRouter()
 # Регистрация ViewSets
 router.register('recipes', RecipeViewSet, basename='recipes')
 router.register('users', UserViewSet, basename='users')
+router.register('ingredients', IngredientViewSet, basename='ingredients')
 
 urlpatterns = [
     # API endpoints

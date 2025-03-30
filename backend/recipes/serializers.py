@@ -14,7 +14,7 @@ from drf_spectacular.utils import extend_schema_field
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = ('id', 'name', 'slug', 'color')
+        fields = ('id', 'name', 'slug')
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -50,7 +50,6 @@ class RecipeSerializer(serializers.ModelSerializer):
     )
     tags = TagSerializer(many=True, read_only=True)
     author = UserSerializer(read_only=True)
-    # Возвращает URI вместо Base64
     image = serializers.ImageField(use_url=True)
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()

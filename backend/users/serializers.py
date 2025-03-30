@@ -3,7 +3,6 @@ from django.contrib.auth import get_user_model
 from drf_extra_fields.fields import Base64ImageField
 from drf_spectacular.utils import extend_schema_field
 from recipes.models import Recipe
-
 User = get_user_model()
 
 

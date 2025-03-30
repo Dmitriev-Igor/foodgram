@@ -12,7 +12,7 @@ from .models import (
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'color', 'recipe_count')
+    list_display = ('name', 'slug', 'recipe_count')
     search_fields = ('name', 'slug')
     prepopulated_fields = {'slug': ('name',)}
     save_on_top = True
@@ -35,11 +35,9 @@ class IngredientAdmin(admin.ModelAdmin):
     search_fields = ('name', 'measurement_unit')
     list_filter = ('measurement_unit',)
     ordering = ('name',)
-    save_on_top = True
-    list_per_page = 50
 
     def recipe_count(self, obj):
-        return obj.recipes.count()
+        return obj.recipe_ingredients.count()
     recipe_count.short_description = 'Используется в рецептах'
 
     def save_model(self, request, obj, form, change):

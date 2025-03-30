@@ -6,7 +6,10 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from reportlab.pdfgen import canvas
 from io import BytesIO
-
+from django_filters.rest_framework import DjangoFilterBackend
+from .models import Ingredient
+from .serializers import IngredientSerializer
+from .filters import IngredientFilter
 from .models import Recipe, Favorite, RecipeIngredient
 from .serializers import RecipeSerializer, RecipeMinifiedSerializer
 from .filters import RecipeFilter
@@ -18,34 +21,38 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
     filterset_class = RecipeFilter
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.select_related('author').prefetch_related(
+            'tags',
+            'recipe_ingredients__ingredient',
+        )
+
     @action(
         detail=True,
         methods=['post', 'delete'],
         permission_classes=[permissions.IsAuthenticated]
     )
     def favorite(self, request, pk=None):
-        recipe = get_object_or_404(Recipe, pk=pk)
+        exists = Favorite.objects.filter(
+            user=request.user,
+            recipe_id=pk
+        ).exists()
+
         if request.method == 'POST':
-            _, created = Favorite.objects.get_or_create(
-                user=request.user,
-                recipe=recipe
-            )
-            if not created:
+            if exists:
                 return Response(
                     {'error': 'Рецепт уже в избранном'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+            Favorite.objects.create(user=request.user, recipe_id=pk)
+            recipe = get_object_or_404(Recipe, pk=pk)
             serializer = RecipeMinifiedSerializer(instance=recipe)
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED
-            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        Favorite.objects.filter(
-            user=request.user,
-            recipe=recipe
-        ).delete()
+        if exists:
+            Favorite.objects.filter(user=request.user, recipe_id=pk).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
@@ -54,16 +61,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[permissions.IsAuthenticated]
     )
     def download_shopping_cart(self, request):
-        recipes_limit = request.query_params.get('recipes_limit')
         ingredients = RecipeIngredient.objects.filter(
             recipe__shoppingcart__user=request.user
-        ).values(
+        ).select_related('ingredient').values(
             'ingredient__name',
             'ingredient__measurement_unit'
         ).annotate(total=Sum('amount'))
 
-        if recipes_limit:
-            ingredients = ingredients[:int(recipes_limit)]
+        if self.request.query_params.get('recipes_limit'):
+            ingredients = ingredients[:int(
+                self.request.query_params.get('recipes_limit'))]
 
         return self.generate_pdf_response(ingredients)
 
@@ -94,3 +101,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'attachment; filename="shopping_list.pdf"'
         )
         return response
+
+
+class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Ingredient.objects.all()
+    serializer_class = IngredientSerializer
+    pagination_class = None
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = IngredientFilter

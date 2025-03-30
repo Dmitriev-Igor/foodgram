@@ -12,11 +12,6 @@ class Tag(models.Model):
         validators=[RegexValidator(r'^[-a-zA-Z0-9_]+$')],
         verbose_name='Слаг'
     )
-    color = models.CharField(
-        max_length=7,
-        validators=[RegexValidator(r'^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$')],
-        verbose_name='Цвет'
-    )
 
     class Meta:
         verbose_name = 'Тег'
@@ -29,11 +24,14 @@ class Tag(models.Model):
 class Ingredient(models.Model):
     name = models.CharField(max_length=200, verbose_name='Название')
     measurement_unit = models.CharField(
-        max_length=200, verbose_name='Единица измерения')
+        max_length=200,
+        verbose_name='Единица измерения'
+    )
 
     class Meta:
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
+        ordering = ('name',)
 
     def __str__(self):
         return f'{self.name} ({self.measurement_unit})'

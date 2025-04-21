@@ -1,111 +1,182 @@
-from rest_framework import viewsets, permissions, status
+from django.db.models import Sum
+from rest_framework import permissions, status, viewsets
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect
+from io import BytesIO
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Sum
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
-from reportlab.pdfgen import canvas
-from io import BytesIO
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Ingredient
-from .serializers import IngredientSerializer
-from .filters import IngredientFilter
-from .models import Recipe, Favorite, RecipeIngredient
-from .serializers import RecipeSerializer, RecipeMinifiedSerializer
-from .filters import RecipeFilter
 
+from .models import Recipe, Favorite, RecipeIngredient, Ingredient, Tag, ShoppingCart
+from .serializers import RecipeSerializer, RecipeMinifiedSerializer, IngredientSerializer, TagSerializer, FavoriteSerializer, ShoppingCartSerializer, GetRecipeSerializer
+from .filters import RecipeFilter, IngredientFilter
+from .permissions import AnonimOrAuthenticatedReadOnly, AuthorOrReadOnly
 
-class RecipeViewSet(viewsets.ModelViewSet):
-    queryset = Recipe.objects.all()
-    serializer_class = RecipeSerializer
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
-    filterset_class = RecipeFilter
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        return queryset.select_related('author').prefetch_related(
-            'tags',
-            'recipe_ingredients__ingredient',
-        )
-
-    @action(
-        detail=True,
-        methods=['post', 'delete'],
-        permission_classes=[permissions.IsAuthenticated]
-    )
-    def favorite(self, request, pk=None):
-        exists = Favorite.objects.filter(
-            user=request.user,
-            recipe_id=pk
-        ).exists()
-
-        if request.method == 'POST':
-            if exists:
-                return Response(
-                    {'error': 'Рецепт уже в избранном'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            Favorite.objects.create(user=request.user, recipe_id=pk)
-            recipe = get_object_or_404(Recipe, pk=pk)
-            serializer = RecipeMinifiedSerializer(instance=recipe)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        if exists:
-            Favorite.objects.filter(user=request.user, recipe_id=pk).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @action(
-        detail=False,
-        methods=['get'],
-        permission_classes=[permissions.IsAuthenticated]
-    )
-    def download_shopping_cart(self, request):
-        ingredients = RecipeIngredient.objects.filter(
-            recipe__shoppingcart__user=request.user
-        ).select_related('ingredient').values(
-            'ingredient__name',
-            'ingredient__measurement_unit'
-        ).annotate(total=Sum('amount'))
-
-        if self.request.query_params.get('recipes_limit'):
-            ingredients = ingredients[:int(
-                self.request.query_params.get('recipes_limit'))]
-
-        return self.generate_pdf_response(ingredients)
-
-    def generate_pdf_response(self, ingredients):
-        buffer = BytesIO()
-        p = canvas.Canvas(buffer)
-        y = 800
-
-        p.drawString(100, y, "Список покупок:")
-        y -= 30
-
-        for ing in ingredients:
-            text = (
-                f"{ing['ingredient__name']} "
-                f"({ing['ingredient__measurement_unit']}) - "
-                f"{ing['total']}"
-            )
-            p.drawString(100, y, text)
-            y -= 20
-
-        p.save()
-        buffer.seek(0)
-        response = HttpResponse(
-            buffer,
-            content_type='application/pdf'
-        )
-        response['Content-Disposition'] = (
-            'attachment; filename="shopping_list.pdf"'
-        )
-        return response
+from rest_framework.pagination import LimitOffsetPagination
+from .utils import get_shopping_cart_textfile
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
     filter_backends = (DjangoFilterBackend,)
     filterset_class = IngredientFilter
+    permission_classes = (permissions.AllowAny,)
+    search_fields = ('^name', )
+
+
+class RecipeViewSet(viewsets.ModelViewSet):
+    """ViewSet для работы с рецептами"""
+
+    queryset = Recipe.objects.all()
+    serializer_class = RecipeSerializer
+    permission_classes = (AuthorOrReadOnly,)
+    pagination_class = LimitOffsetPagination
+    filter_backends = (DjangoFilterBackend, )
+    filterset_class = RecipeFilter
+
+    @action(
+        detail=True,
+        methods=['post', 'delete'],
+        permission_classes=(permissions.IsAuthenticated,),
+        url_path='favorite'
+    )
+    def get_favorite(self, request, pk):
+        """Работа с избранным."""
+        try:
+            recipe_id = int(pk)
+        except ValueError:
+            return Response(
+                {"error": "ID рецепта должен быть целым числом."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        recipe = get_object_or_404(Recipe, pk=recipe_id)
+
+        if request.method == 'POST':
+            # Логика добавления в избранное
+            serializer = FavoriteSerializer(
+                data={'user': request.user.id, 'recipe': recipe.id}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(
+                RecipeMinifiedSerializer(recipe).data,
+                status=status.HTTP_201_CREATED
+            )
+        else:
+            # Логика удаления из избранного
+            if not Favorite.objects.filter(user=request.user, recipe=recipe).exists():
+                return Response(
+                    {"error": "Рецепта нет в избранном."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            Favorite.objects.filter(user=request.user, recipe=recipe).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=True,
+        methods=['post', 'delete'],
+        url_path='shopping_cart',
+        permission_classes=(permissions.IsAuthenticated,)
+    )
+    def get_shopping_cart(self, request, pk):
+        """Работа со списком покупок."""
+        recipe = get_object_or_404(Recipe, pk=pk)
+        if request.method == 'POST':
+            serializer = ShoppingCartSerializer(
+                data={'user': request.user.id, 'recipe': recipe.id}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            shopping_cart_serializer = RecipeMinifiedSerializer(recipe)
+            return Response(
+                shopping_cart_serializer.data, status=status.HTTP_201_CREATED
+            )
+        else:
+            if not ShoppingCart.objects.filter(user=request.user, recipe=recipe).exists():
+                return Response(
+                    {"error": "Рецепта нет в списке покупок."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            ShoppingCart.objects.filter(
+                user=request.user, recipe=recipe).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=False,
+        methods=('get',),
+        url_path='download_shopping_cart',
+        permission_classes=(permissions.IsAuthenticated,)
+    )
+    def download_shopping_cart(self, request):
+        """Загрузка списка покупок."""
+        return get_shopping_cart_textfile(request.user)
+
+    def _get_shopping_cart_ingredients(self):
+        """Получение агрегированного списка ингредиентов"""
+        return RecipeIngredient.objects.filter(
+            recipe__shoppingcart__user=self.request.user
+        ).values(
+            'ingredient__name',
+            'ingredient__measurement_unit'
+        ).annotate(total=Sum('amount'))
+
+    def _generate_pdf_response(self, ingredients):
+        """Генерация PDF-документа"""
+        buffer = BytesIO()
+        pdf = canvas.Canvas(buffer)
+        y_position = 800
+
+        pdf.drawString(100, y_position, "Список покупок:")
+        y_position -= 30
+
+        for ingredient in ingredients:
+            text_line = (
+                f"{ingredient['ingredient__name']} "
+                f"({ingredient['ingredient__measurement_unit']}) - "
+                f"{ingredient['total']}"
+            )
+            pdf.drawString(100, y_position, text_line)
+            y_position -= 20
+
+        pdf.save()
+        buffer.seek(0)
+
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="shopping_list.pdf"'
+        return response
+
+    def get_serializer_class(self):
+        """Определение необходимого сериализатора."""
+        if self.request.method == 'GET':
+            return GetRecipeSerializer
+        return RecipeSerializer
+
+    @action(
+        detail=True,
+        methods=['get'],
+        url_path='get-link',
+        permission_classes=(permissions.AllowAny,)
+    )
+    def get_short_link(self, request, *args, **kwargs):
+        short_link = request.build_absolute_uri()
+        short_link = short_link.replace('/api/recipes/', '/t/')
+        short_link = short_link.replace('/get-link/', '/')
+        return JsonResponse({'short-link': short_link})
+
+
+class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Tag.objects.all().order_by('name')
+    serializer_class = TagSerializer
+    permission_classes = (permissions.AllowAny,)
+    pagination_class = None
+
+
+def short_link_view(request, *args, **kwargs):
+    path = request.build_absolute_uri()
+    path = path.replace('/t/', '/api/recipes/')
+    return redirect(path)

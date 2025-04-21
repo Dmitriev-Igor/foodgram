@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.html import format_html
 from django.core.exceptions import ValidationError
 from .models import (
     Tag,
@@ -22,12 +23,6 @@ class TagAdmin(admin.ModelAdmin):
         return obj.recipes.count()
     recipe_count.short_description = 'Рецептов с тегом'
 
-    def save_model(self, request, obj, form, change):
-        if not obj.color.startswith('#'):
-            raise ValidationError(
-                "Цвет должен быть в формате HEX (например, #FF0000)")
-        super().save_model(request, obj, form, change)
-
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
@@ -37,7 +32,7 @@ class IngredientAdmin(admin.ModelAdmin):
     ordering = ('name',)
 
     def recipe_count(self, obj):
-        return obj.recipe_ingredients.count()
+        return obj.recipeingredients.count()
     recipe_count.short_description = 'Используется в рецептах'
 
     def save_model(self, request, obj, form, change):
@@ -63,12 +58,13 @@ class RecipeAdmin(admin.ModelAdmin):
     list_per_page = 25
 
     def favorite_count(self, obj):
-        return obj.in_favorites.count()
+        return obj.favorites.count()
     favorite_count.short_description = 'В избранном'
 
     def image_preview(self, obj):
-        return obj.image.url if obj.image else 'Нет изображения'
-    image_preview.short_description = 'Превью'
+        if obj.image:
+            return format_html('<img src="{}" width="100" />', obj.image.url)
+        return "Нет изображения"
 
 
 @admin.register(RecipeIngredient)

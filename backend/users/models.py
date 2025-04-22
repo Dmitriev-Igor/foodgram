@@ -2,11 +2,13 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 
+
 LENGTH_TEXT = 20
 
 
 class User(AbstractUser):
-
+    """Кастомная модель пользователя с email в качестве username."""
+    
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ('username', 'first_name', 'last_name', 'password',)
 
@@ -23,9 +25,8 @@ class User(AbstractUser):
         verbose_name='никнейм',
         max_length=150,
         unique=True,
-        validators=(UnicodeUsernameValidator(), )
+        validators=(UnicodeUsernameValidator(),)
     )
-
     first_name = models.CharField('Имя', max_length=150)
     last_name = models.CharField('Фамилия', max_length=150)
     password = models.CharField('Пароль', max_length=150)
@@ -52,6 +53,8 @@ class User(AbstractUser):
 
 
 class Subscription(models.Model):
+    """Модель подписки пользователей друг на друга."""
+    
     subscriber = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

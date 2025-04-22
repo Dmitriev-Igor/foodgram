@@ -1,18 +1,13 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.core.exceptions import ValidationError
-from .models import (
-    Tag,
-    Ingredient,
-    Recipe,
-    RecipeIngredient,
-    ShoppingCart,
-    Favorite
-)
+from .models import Tag, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Favorite
 
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
+    """Админ-панель для модели Tag."""
+
     list_display = ('name', 'slug', 'recipe_count')
     search_fields = ('name', 'slug')
     prepopulated_fields = {'slug': ('name',)}
@@ -20,22 +15,27 @@ class TagAdmin(admin.ModelAdmin):
     list_per_page = 20
 
     def recipe_count(self, obj):
+        """Возвращает количество рецептов с тегом."""
         return obj.recipes.count()
     recipe_count.short_description = 'Рецептов с тегом'
 
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
+    """Админ-панель для модели Ingredient."""
+
     list_display = ('name', 'measurement_unit', 'recipe_count')
     search_fields = ('name', 'measurement_unit')
     list_filter = ('measurement_unit',)
     ordering = ('name',)
 
     def recipe_count(self, obj):
+        """Возвращает количество рецептов с ингредиентом."""
         return obj.recipeingredients.count()
     recipe_count.short_description = 'Используется в рецептах'
 
     def save_model(self, request, obj, form, change):
+        """Проверяет уникальность ингредиента перед сохранением."""
         if Ingredient.objects.filter(
             name__iexact=obj.name,
             measurement_unit__iexact=obj.measurement_unit
@@ -46,6 +46,8 @@ class IngredientAdmin(admin.ModelAdmin):
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
+    """Админ-панель для модели Recipe."""
+
     list_display = ('name', 'author', 'favorite_count',
                     'cooking_time', 'created_at', 'image_preview')
     search_fields = ('name', 'author__username', 'text')
@@ -58,10 +60,12 @@ class RecipeAdmin(admin.ModelAdmin):
     list_per_page = 25
 
     def favorite_count(self, obj):
+        """Возвращает количество добавлений рецепта в избранное."""
         return obj.favorites.count()
     favorite_count.short_description = 'В избранном'
 
     def image_preview(self, obj):
+        """Отображает миниатюру изображения рецепта."""
         if obj.image:
             return format_html('<img src="{}" width="100" />', obj.image.url)
         return "Нет изображения"
@@ -69,6 +73,8 @@ class RecipeAdmin(admin.ModelAdmin):
 
 @admin.register(RecipeIngredient)
 class RecipeIngredientAdmin(admin.ModelAdmin):
+    """Админ-панель для модели RecipeIngredient."""
+
     list_display = ('recipe', 'ingredient', 'amount')
     autocomplete_fields = ['recipe', 'ingredient']
     search_fields = ('recipe__name', 'ingredient__name')
@@ -77,6 +83,8 @@ class RecipeIngredientAdmin(admin.ModelAdmin):
 
 @admin.register(ShoppingCart)
 class ShoppingCartAdmin(admin.ModelAdmin):
+    """Админ-панель для модели ShoppingCart."""
+
     list_display = ('user', 'recipe', 'added_at')
     autocomplete_fields = ['user', 'recipe']
     date_hierarchy = 'added_at'
@@ -85,6 +93,8 @@ class ShoppingCartAdmin(admin.ModelAdmin):
 
 @admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
+    """Админ-панель для модели Favorite."""
+
     list_display = ('user', 'recipe', 'created_at')
     autocomplete_fields = ['user', 'recipe']
     date_hierarchy = 'created_at'

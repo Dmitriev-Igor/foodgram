@@ -3,21 +3,28 @@ from rest_framework import permissions, status, viewsets
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from io import BytesIO
-from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Recipe, Favorite, RecipeIngredient, Ingredient, Tag, ShoppingCart
-from .serializers import RecipeSerializer, RecipeMinifiedSerializer, IngredientSerializer, TagSerializer, FavoriteSerializer, ShoppingCartSerializer, GetRecipeSerializer
+from .serializers import (
+    RecipeSerializer,
+    RecipeMinifiedSerializer,
+    IngredientSerializer,
+    TagSerializer,
+    FavoriteSerializer,
+    ShoppingCartSerializer,
+    GetRecipeSerializer
+)
 from .filters import RecipeFilter, IngredientFilter
 from .permissions import AnonimOrAuthenticatedReadOnly, AuthorOrReadOnly
-
 from rest_framework.pagination import LimitOffsetPagination
 from .utils import get_shopping_cart_textfile
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet для работы с ингредиентами."""
 
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
@@ -25,17 +32,17 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = IngredientFilter
     permission_classes = (permissions.AllowAny,)
-    search_fields = ('^name', )
+    search_fields = ('^name',)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    """ViewSet для работы с рецептами"""
+    """ViewSet для работы с рецептами."""
 
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     permission_classes = (AuthorOrReadOnly,)
     pagination_class = LimitOffsetPagination
-    filter_backends = (DjangoFilterBackend, )
+    filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
 
     @action(
@@ -45,7 +52,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_path='favorite'
     )
     def get_favorite(self, request, pk):
-        """Работа с избранным."""
+        """
+        Добавляет или удаляет рецепт из избранного.
+        
+        Args:
+            request: Запрос от клиента.
+            pk: ID рецепта.
+            
+        Returns:
+            Response: Ответ с данными рецепта или статусом операции.
+        """
         try:
             recipe_id = int(pk)
         except ValueError:
@@ -57,7 +73,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         recipe = get_object_or_404(Recipe, pk=recipe_id)
 
         if request.method == 'POST':
-            # Логика добавления в избранное
             serializer = FavoriteSerializer(
                 data={'user': request.user.id, 'recipe': recipe.id}
             )
@@ -68,7 +83,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_201_CREATED
             )
         else:
-            # Логика удаления из избранного
             if not Favorite.objects.filter(user=request.user, recipe=recipe).exists():
                 return Response(
                     {"error": "Рецепта нет в избранном."},
@@ -84,7 +98,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(permissions.IsAuthenticated,)
     )
     def get_shopping_cart(self, request, pk):
-        """Работа со списком покупок."""
+        """
+        Добавляет или удаляет рецепт из списка покупок.
+        
+        Args:
+            request: Запрос от клиента.
+            pk: ID рецепта.
+            
+        Returns:
+            Response: Ответ с данными рецепта или статусом операции.
+        """
         recipe = get_object_or_404(Recipe, pk=pk)
         if request.method == 'POST':
             serializer = ShoppingCartSerializer(
@@ -113,11 +136,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(permissions.IsAuthenticated,)
     )
     def download_shopping_cart(self, request):
-        """Загрузка списка покупок."""
+        """
+        Загружает список покупок в виде текстового файла.
+        
+        Args:
+            request: Запрос от клиента.
+            
+        Returns:
+            HttpResponse: Ответ с файлом списка покупок.
+        """
         return get_shopping_cart_textfile(request.user)
 
     def _get_shopping_cart_ingredients(self):
-        """Получение агрегированного списка ингредиентов"""
+        """Получает агрегированный список ингредиентов для списка покупок."""
         return RecipeIngredient.objects.filter(
             recipe__shoppingcart__user=self.request.user
         ).values(
@@ -126,7 +157,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
         ).annotate(total=Sum('amount'))
 
     def _generate_pdf_response(self, ingredients):
-        """Генерация PDF-документа"""
+        """
+        Генерирует PDF-документ со списком покупок.
+        
+        Args:
+            ingredients: Список ингредиентов.
+            
+        Returns:
+            HttpResponse: Ответ с PDF-файлом.
+        """
         buffer = BytesIO()
         pdf = canvas.Canvas(buffer)
         y_position = 800
@@ -151,7 +190,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return response
 
     def get_serializer_class(self):
-        """Определение необходимого сериализатора."""
+        """Определяет сериализатор в зависимости от метода запроса."""
         if self.request.method == 'GET':
             return GetRecipeSerializer
         return RecipeSerializer
@@ -163,6 +202,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(permissions.AllowAny,)
     )
     def get_short_link(self, request, *args, **kwargs):
+        """
+        Генерирует короткую ссылку на рецепт.
+        
+        Args:
+            request: Запрос от клиента.
+            
+        Returns:
+            JsonResponse: Ответ с короткой ссылкой.
+        """
         short_link = request.build_absolute_uri()
         short_link = short_link.replace('/api/recipes/', '/t/')
         short_link = short_link.replace('/get-link/', '/')
@@ -170,6 +218,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet для работы с тегами."""
+
     queryset = Tag.objects.all().order_by('name')
     serializer_class = TagSerializer
     permission_classes = (permissions.AllowAny,)
@@ -177,6 +227,15 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 def short_link_view(request, *args, **kwargs):
+    """
+    Перенаправляет с короткой ссылки на полный URL рецепта.
+    
+    Args:
+        request: Запрос от клиента.
+        
+    Returns:
+        Redirect: Перенаправление на полный URL рецепта.
+    """
     path = request.build_absolute_uri()
     path = path.replace('/t/', '/api/recipes/')
     return redirect(path)

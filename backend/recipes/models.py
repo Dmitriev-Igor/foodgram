@@ -1,15 +1,21 @@
 from django.db import models
-from django.core.validators import RegexValidator
-from django.core.validators import MinValueValidator
+from django.core.validators import RegexValidator, MinValueValidator
 from django.contrib.auth import get_user_model
+
+
 LENGTH_TEXT = 20
 User = get_user_model()
 
 
 class Tag(models.Model):
-    name = models.CharField(max_length=200, unique=True,
-                            db_index=True,
-                            verbose_name='Название')
+    """Модель тегов для рецептов."""
+
+    name = models.CharField(
+        max_length=200,
+        unique=True,
+        db_index=True,
+        verbose_name='Название'
+    )
     slug = models.SlugField(
         max_length=200,
         unique=True,
@@ -27,6 +33,8 @@ class Tag(models.Model):
 
 
 class Ingredient(models.Model):
+    """Модель ингредиентов для рецептов."""
+
     name = models.CharField(max_length=200, verbose_name='Название')
     measurement_unit = models.CharField(
         max_length=200,
@@ -46,10 +54,7 @@ class Ingredient(models.Model):
 class Recipe(models.Model):
     """Модель рецептов."""
 
-    tags = models.ManyToManyField(
-        Tag,
-        verbose_name='Теги',
-    )
+    tags = models.ManyToManyField(Tag, verbose_name='Теги')
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -59,7 +64,6 @@ class Recipe(models.Model):
         Ingredient,
         through='RecipeIngredient',
         verbose_name='Ингредиенты',
-
     )
     name = models.CharField(
         'Название',
@@ -70,7 +74,7 @@ class Recipe(models.Model):
         'Ссылка на картинку на сайте',
         upload_to='recipes/',
     )
-    text = models.TextField('Описание',)
+    text = models.TextField('Описание')
     cooking_time = models.PositiveSmallIntegerField(
         'Время приготовления (в минутах)',
         validators=(
@@ -97,7 +101,7 @@ class Recipe(models.Model):
 
 
 class RecipeIngredient(models.Model):
-    """Модель для связи ингредиентов с рецептами с указанием количества."""
+    """Модель связи ингредиентов с рецептами с указанием количества."""
 
     ingredient = models.ForeignKey(
         Ingredient,
@@ -126,7 +130,7 @@ class RecipeIngredient(models.Model):
         ordering = ('id',)
         constraints = (
             models.UniqueConstraint(
-                fields=('ingredient', 'recipe',),
+                fields=('ingredient', 'recipe'),
                 name='unique_recipe_ingredient',
             ),
         )
@@ -136,7 +140,7 @@ class RecipeIngredient(models.Model):
 
 
 class UserRecipe(models.Model):
-    """Абстрактный класс для избранного и списка покупок."""
+    """Абстрактная модель для избранного и списка покупок."""
 
     recipe = models.ForeignKey(
         Recipe,
@@ -154,14 +158,15 @@ class UserRecipe(models.Model):
         ordering = ('id',)
         constraints = (
             models.UniqueConstraint(
-                fields=('recipe', 'user',),
+                fields=('recipe', 'user'),
                 name='unique_%(class)s',
             ),
         )
 
 
 class Favorite(UserRecipe):
-    """Модель для избранного."""
+    """Модель для избранных рецептов пользователя."""
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta(UserRecipe.Meta):
@@ -174,7 +179,8 @@ class Favorite(UserRecipe):
 
 
 class ShoppingCart(UserRecipe):
-    """Модель списка покупок."""
+    """Модель для списка покупок пользователя."""
+
     added_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

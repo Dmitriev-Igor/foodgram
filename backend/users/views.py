@@ -16,6 +16,8 @@ from recipes.permissions import AnonimOrAuthenticatedReadOnly, AuthorOrReadOnly
 
 
 class UserViewSet(UserViewSet):
+    """ViewSet для работы с пользователями и подписками."""
+    
     queryset = User.objects.all()
     serializer_class = MyUserSerializer
     permission_classes = (AnonimOrAuthenticatedReadOnly,)
@@ -29,6 +31,7 @@ class UserViewSet(UserViewSet):
         permission_classes=(permissions.IsAuthenticated,),
     )
     def get_me(self, request):
+        """Получение и изменение данных текущего пользователя."""
         if request.method == 'PATCH':
             serializer = MyUserSerializer(
                 request.user,
@@ -52,6 +55,7 @@ class UserViewSet(UserViewSet):
         permission_classes=(permissions.IsAuthenticated,),
     )
     def set_password(self, request):
+        """Изменение пароля текущего пользователя."""
         serializer = CustomSetPasswordSerializer(
             data=request.data,
             context={'request': request}
@@ -69,6 +73,7 @@ class UserViewSet(UserViewSet):
         permission_classes=(permissions.IsAuthenticated,)
     )
     def set_avatar(self, request):
+        """Добавление или удаление аватара текущего пользователя."""
         user = request.user
 
         if request.method == 'DELETE':
@@ -105,6 +110,7 @@ class UserViewSet(UserViewSet):
         permission_classes=(permissions.IsAuthenticated,)
     )
     def subscribe(self, request, id=None):
+        """Создание или удаление подписки на автора."""
         author = get_object_or_404(User, id=id)
 
         if request.method == 'POST':
@@ -114,7 +120,9 @@ class UserViewSet(UserViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            if Subscription.objects.filter(subscriber=request.user, author=author).exists():
+            if Subscription.objects.filter(
+                subscriber=request.user, author=author
+            ).exists():
                 return Response(
                     {'errors': 'Вы уже подписаны на этого пользователя'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -148,6 +156,7 @@ class UserViewSet(UserViewSet):
         permission_classes=(permissions.IsAuthenticated,)
     )
     def subscriptions(self, request):
+        """Получение списка подписок текущего пользователя."""
         subscriptions = User.objects.filter(
             subscribed_by__subscriber=request.user
         )

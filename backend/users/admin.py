@@ -5,6 +5,8 @@ from .models import User, Subscription
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
+    """Админ-панель для модели User."""
+
     list_display = (
         'username',
         'email',
@@ -18,16 +20,20 @@ class UserAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {'fields': ('username', 'email', 'password')}),
         ('Персональная информация', {
-         'fields': ('first_name', 'last_name', 'avatar')}),
+            'fields': ('first_name', 'last_name', 'avatar')}),
         ('Права', {'fields': ('is_active', 'is_staff',
-         'is_superuser', 'groups', 'user_permissions')}),
+                              'is_superuser', 'groups', 'user_permissions')}),
         ('Даты', {'fields': ('last_login', 'date_joined')}),
     )
     readonly_fields = ('last_login', 'date_joined')
 
     def avatar_preview(self, obj):
+        """Отображает миниатюру аватара в админ-панели."""
         if obj.avatar:
-            return format_html('<img src="{}" width="50" height="50" />', obj.avatar.url)
+            return format_html(
+                '<img src="{}" width="50" height="50" />',
+                obj.avatar.url
+            )
         return "Нет аватара"
 
     avatar_preview.short_description = "Аватар"
@@ -35,6 +41,8 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
+    """Админ-панель для модели Subscription."""
+
     list_display = ('subscriber', 'author', 'created')
     list_filter = ('created',)
     search_fields = (

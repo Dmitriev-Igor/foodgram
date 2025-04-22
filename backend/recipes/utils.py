@@ -7,8 +7,15 @@ from recipes.models import RecipeIngredient
 
 
 def get_shopping_cart_textfile(user):
-    """Формирует текстовый файл списка покупок."""
-
+    """
+    Формирует текстовый файл списка покупок.
+    
+    Args:
+        user: Пользователь, для которого формируется список покупок.
+    
+    Returns:
+        HttpResponse: Ответ с текстовым файлом списка покупок.
+    """
     ingredients = RecipeIngredient.objects.filter(
         recipe__shopping_carts__user=user
     ).values(

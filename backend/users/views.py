@@ -5,19 +5,18 @@ from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 from .models import Subscription, User
 from .serializers import (
-    SubscriptionSerializer,
     MyUserSerializer,
     GetSubscriptionSerializer,
     AvatarSerializer,
     CustomSetPasswordSerializer
 )
 from rest_framework.pagination import LimitOffsetPagination
-from recipes.permissions import AnonimOrAuthenticatedReadOnly, AuthorOrReadOnly
+from recipes.permissions import AnonimOrAuthenticatedReadOnly
 
 
 class UserViewSet(UserViewSet):
     """ViewSet для работы с пользователями и подписками."""
-    
+
     queryset = User.objects.all()
     serializer_class = MyUserSerializer
     permission_classes = (AnonimOrAuthenticatedReadOnly,)

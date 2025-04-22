@@ -1,13 +1,20 @@
 from django.db.models import Sum
 from rest_framework import permissions, status, viewsets
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
-from io import BytesIO
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Recipe, Favorite, RecipeIngredient, Ingredient, Tag, ShoppingCart
+from .models import (
+    Recipe,
+    Favorite,
+    RecipeIngredient,
+    Ingredient,
+    Tag,
+    ShoppingCart
+)
+
 from .serializers import (
     RecipeSerializer,
     RecipeMinifiedSerializer,
@@ -18,7 +25,7 @@ from .serializers import (
     GetRecipeSerializer
 )
 from .filters import RecipeFilter, IngredientFilter
-from .permissions import AnonimOrAuthenticatedReadOnly, AuthorOrReadOnly
+from .permissions import AuthorOrReadOnly
 from rest_framework.pagination import LimitOffsetPagination
 from .utils import get_shopping_cart_textfile
 
@@ -54,11 +61,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_favorite(self, request, pk):
         """
         Добавляет или удаляет рецепт из избранного.
-        
+
         Args:
             request: Запрос от клиента.
             pk: ID рецепта.
-            
+
         Returns:
             Response: Ответ с данными рецепта или статусом операции.
         """
@@ -83,7 +90,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_201_CREATED
             )
         else:
-            if not Favorite.objects.filter(user=request.user, recipe=recipe).exists():
+            if not Favorite.objects.filter(
+                user=request.user,
+                recipe=recipe
+            ).exists():
                 return Response(
                     {"error": "Рецепта нет в избранном."},
                     status=status.HTTP_400_BAD_REQUEST
@@ -100,11 +110,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_shopping_cart(self, request, pk):
         """
         Добавляет или удаляет рецепт из списка покупок.
-        
+
         Args:
             request: Запрос от клиента.
             pk: ID рецепта.
-            
+
         Returns:
             Response: Ответ с данными рецепта или статусом операции.
         """
@@ -120,7 +130,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 shopping_cart_serializer.data, status=status.HTTP_201_CREATED
             )
         else:
-            if not ShoppingCart.objects.filter(user=request.user, recipe=recipe).exists():
+            if not ShoppingCart.objects.filter(
+                user=request.user,
+                recipe=recipe
+            ).exists():
                 return Response(
                     {"error": "Рецепта нет в списке покупок."},
                     status=status.HTTP_400_BAD_REQUEST
@@ -138,10 +151,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def download_shopping_cart(self, request):
         """
         Загружает список покупок в виде текстового файла.
-        
+
         Args:
             request: Запрос от клиента.
-            
+
         Returns:
             HttpResponse: Ответ с файлом списка покупок.
         """
@@ -155,39 +168,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'ingredient__name',
             'ingredient__measurement_unit'
         ).annotate(total=Sum('amount'))
-
-    def _generate_pdf_response(self, ingredients):
-        """
-        Генерирует PDF-документ со списком покупок.
-        
-        Args:
-            ingredients: Список ингредиентов.
-            
-        Returns:
-            HttpResponse: Ответ с PDF-файлом.
-        """
-        buffer = BytesIO()
-        pdf = canvas.Canvas(buffer)
-        y_position = 800
-
-        pdf.drawString(100, y_position, "Список покупок:")
-        y_position -= 30
-
-        for ingredient in ingredients:
-            text_line = (
-                f"{ingredient['ingredient__name']} "
-                f"({ingredient['ingredient__measurement_unit']}) - "
-                f"{ingredient['total']}"
-            )
-            pdf.drawString(100, y_position, text_line)
-            y_position -= 20
-
-        pdf.save()
-        buffer.seek(0)
-
-        response = HttpResponse(buffer, content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="shopping_list.pdf"'
-        return response
 
     def get_serializer_class(self):
         """Определяет сериализатор в зависимости от метода запроса."""
@@ -204,10 +184,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_short_link(self, request, *args, **kwargs):
         """
         Генерирует короткую ссылку на рецепт.
-        
+
         Args:
             request: Запрос от клиента.
-            
+
         Returns:
             JsonResponse: Ответ с короткой ссылкой.
         """
@@ -229,10 +209,10 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 def short_link_view(request, *args, **kwargs):
     """
     Перенаправляет с короткой ссылки на полный URL рецепта.
-    
+
     Args:
         request: Запрос от клиента.
-        
+
     Returns:
         Redirect: Перенаправление на полный URL рецепта.
     """

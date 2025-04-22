@@ -13,7 +13,7 @@ User = get_user_model()
 
 class MyUserSerializer(UserSerializer):
     """Сериализатор для модели User с дополнительным полем подписки."""
-    
+
     is_subscribed = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -41,7 +41,7 @@ class MyUserSerializer(UserSerializer):
 
 class MyUserCreateSerializer(UserCreateSerializer):
     """Сериализатор для создания пользователя."""
-    
+
     class Meta:
         model = User
         fields = [
@@ -57,7 +57,7 @@ class MyUserCreateSerializer(UserCreateSerializer):
 
 class AvatarSerializer(MyUserSerializer):
     """Сериализатор для обновления аватара пользователя."""
-    
+
     avatar = Base64ImageField(
         max_length=None,
         allow_empty_file=True,
@@ -80,7 +80,7 @@ class AvatarSerializer(MyUserSerializer):
 
 class RecipeMinifiedSerializer(serializers.ModelSerializer):
     """Упрощенный сериализатор для модели Recipe."""
-    
+
     class Meta:
         model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')
@@ -88,7 +88,7 @@ class RecipeMinifiedSerializer(serializers.ModelSerializer):
 
 class SubscriptionSerializer(serializers.ModelSerializer):
     """Сериализатор для модели подписок."""
-    
+
     class Meta:
         model = Subscription
         fields = '__all__'
@@ -111,7 +111,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
 class GetSubscriptionSerializer(MyUserSerializer):
     """Сериализатор для получения подписок с рецептами."""
-    
+
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
@@ -151,7 +151,7 @@ class GetSubscriptionSerializer(MyUserSerializer):
 
 class CustomSetPasswordSerializer(serializers.Serializer):
     """Сериализатор для изменения пароля."""
-    
+
     current_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
 

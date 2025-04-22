@@ -8,7 +8,7 @@ LENGTH_TEXT = 20
 
 class User(AbstractUser):
     """Кастомная модель пользователя с email в качестве username."""
-    
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ('username', 'first_name', 'last_name', 'password',)
 
@@ -54,7 +54,7 @@ class User(AbstractUser):
 
 class Subscription(models.Model):
     """Модель подписки пользователей друг на друга."""
-    
+
     subscriber = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

@@ -1,7 +1,14 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.core.exceptions import ValidationError
-from .models import Tag, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Favorite
+from .models import (
+    Tag,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    ShoppingCart,
+    Favorite,
+)
 
 
 @admin.register(Tag)

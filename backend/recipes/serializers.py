@@ -1,7 +1,5 @@
 from rest_framework import serializers
 from rest_framework.serializers import (
-    CurrentUserDefault,
-    HiddenField,
     ModelSerializer,
     SerializerMethodField,
     ValidationError
@@ -92,21 +90,32 @@ class GetRecipeSerializer(serializers.ModelSerializer):
             'cooking_time'
         )
 
-    @staticmethod
-    def get_ingredients(object):
-        """Получает список ингредиентов рецепта."""
-        ingredients = RecipeIngredient.objects.filter(recipe=object)
-        return RecipeIngredientSerializer(ingredients, many=True).data
 
-    def get_is_favorited(self, obj):
-        """Проверяет, находится ли рецепт в избранном."""
-        user = self.context['request'].user
-        return user.favorites.filter(recipe=obj).exists() if user.is_authenticated else False
+@staticmethod
+def get_ingredients(recipe):
+    """Получает список ингредиентов рецепта."""
+    ingredients = RecipeIngredient.objects.filter(recipe=recipe)
+    return RecipeIngredientSerializer(ingredients, many=True).data
 
-    def get_is_in_shopping_cart(self, obj):
-        """Проверяет, находится ли рецепт в списке покупок."""
-        user = self.context['request'].user
-        return user.shopping_carts.filter(recipe=obj).exists() if user.is_authenticated else False
+
+def get_is_favorited(self, obj):
+    """Проверяет, находится ли рецепт в избранном."""
+    user = self.context['request'].user
+    return (
+        user.favorites.filter(recipe=obj).exists()
+        if user.is_authenticated
+        else False
+    )
+
+
+def get_is_in_shopping_cart(self, obj):
+    """Проверяет, находится ли рецепт в списке покупок."""
+    user = self.context['request'].user
+    return (
+        user.shopping_carts.filter(recipe=obj).exists()
+        if user.is_authenticated
+        else False
+    )
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -181,17 +190,23 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Создает новый рецепт."""
-        if 'request' not in self.context or self.context['request'].user.is_anonymous:
+        request = self.context.get('request')
+
+        if request is None or request.user.is_anonymous:
             raise NotAuthenticated(
                 detail="Authentication credentials were not provided.",
                 code='not_authenticated'
             )
-        user = self.context['request'].user
+
+        user = request.user
         validated_data['author'] = user
+
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
+
         recipe = super().create(validated_data)
         self.add_fields(ingredients, tags, recipe)
+
         return recipe
 
     def update(self, instance, validated_data):

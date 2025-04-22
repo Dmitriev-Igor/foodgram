@@ -1,17 +1,14 @@
-from rest_framework import status, permissions
-from rest_framework.decorators import action
-from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
-from .models import Subscription, User
-from .serializers import (
-    MyUserSerializer,
-    GetSubscriptionSerializer,
-    AvatarSerializer,
-    CustomSetPasswordSerializer
-)
-from rest_framework.pagination import LimitOffsetPagination
 from recipes.permissions import AnonimOrAuthenticatedReadOnly
+from rest_framework import permissions, status
+from rest_framework.decorators import action
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.response import Response
+
+from .models import Subscription, User
+from .serializers import (AvatarSerializer, CustomSetPasswordSerializer,
+                          GetSubscriptionSerializer, MyUserSerializer)
 
 
 class UserViewSet(UserViewSet):

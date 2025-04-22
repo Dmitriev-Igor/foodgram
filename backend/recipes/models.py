@@ -1,7 +1,6 @@
-from django.db import models
-from django.core.validators import RegexValidator, MinValueValidator
 from django.contrib.auth import get_user_model
-
+from django.core.validators import MinValueValidator, RegexValidator
+from django.db import models
 
 LENGTH_TEXT = 20
 User = get_user_model()

@@ -150,7 +150,7 @@ class GetSubscriptionSerializer(MyUserSerializer):
 
 
 class CustomSetPasswordSerializer(serializers.Serializer):
-    """Сериализатор для изменения пароля."""
+    """Сериализатор для смены пароля."""
 
     current_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)

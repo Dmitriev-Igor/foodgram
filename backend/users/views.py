@@ -1,18 +1,18 @@
-from rest_framework import status, permissions
-from rest_framework.decorators import action
-from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
+from recipes.permissions import AnonimOrAuthenticatedReadOnly
+from rest_framework import permissions, status
+from rest_framework.decorators import action
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.response import Response
+
 from .models import Subscription, User
 from .serializers import (
-    SubscriptionSerializer,
-    MyUserSerializer,
-    GetSubscriptionSerializer,
     AvatarSerializer,
-    CustomSetPasswordSerializer
+    CustomSetPasswordSerializer,
+    GetSubscriptionSerializer,
+    MyUserSerializer,
 )
-from rest_framework.pagination import LimitOffsetPagination
-from recipes.permissions import AnonimOrAuthenticatedReadOnly, AuthorOrReadOnly
 
 
 class UserViewSet(UserViewSet):
@@ -114,7 +114,8 @@ class UserViewSet(UserViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            if Subscription.objects.filter(subscriber=request.user, author=author).exists():
+            if Subscription.objects.filter(
+                    subscriber=request.user, author=author).exists():
                 return Response(
                     {'errors': 'Вы уже подписаны на этого пользователя'},
                     status=status.HTTP_400_BAD_REQUEST

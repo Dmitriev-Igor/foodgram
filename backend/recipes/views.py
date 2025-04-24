@@ -1,19 +1,21 @@
+
 from django.db.models import Sum
-from rest_framework import permissions, status, viewsets
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
-from io import BytesIO
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-
-from .models import Recipe, Favorite, RecipeIngredient, Ingredient, Tag, ShoppingCart
-from .serializers import RecipeSerializer, RecipeMinifiedSerializer, IngredientSerializer, TagSerializer, FavoriteSerializer, ShoppingCartSerializer, GetRecipeSerializer
-from .filters import RecipeFilter, IngredientFilter
-from .permissions import AnonimOrAuthenticatedReadOnly, AuthorOrReadOnly
-
+from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.response import Response
+
+from .filters import IngredientFilter, RecipeFilter
+from .models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                     ShoppingCart, Tag)
+from .permissions import AuthorOrReadOnly
+from .serializers import (FavoriteSerializer, GetRecipeSerializer,
+                          IngredientSerializer, RecipeMinifiedSerializer,
+                          RecipeSerializer, ShoppingCartSerializer,
+                          TagSerializer)
 from .utils import get_shopping_cart_textfile
 
 
@@ -69,7 +71,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
         else:
             # Логика удаления из избранного
-            if not Favorite.objects.filter(user=request.user, recipe=recipe).exists():
+            if not Favorite.objects.filter(
+                    user=request.user, recipe=recipe).exists():
                 return Response(
                     {"error": "Рецепта нет в избранном."},
                     status=status.HTTP_400_BAD_REQUEST
@@ -97,7 +100,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 shopping_cart_serializer.data, status=status.HTTP_201_CREATED
             )
         else:
-            if not ShoppingCart.objects.filter(user=request.user, recipe=recipe).exists():
+            if not ShoppingCart.objects.filter(
+                    user=request.user, recipe=recipe).exists():
                 return Response(
                     {"error": "Рецепта нет в списке покупок."},
                     status=status.HTTP_400_BAD_REQUEST
@@ -124,31 +128,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'ingredient__name',
             'ingredient__measurement_unit'
         ).annotate(total=Sum('amount'))
-
-    def _generate_pdf_response(self, ingredients):
-        """Генерация PDF-документа"""
-        buffer = BytesIO()
-        pdf = canvas.Canvas(buffer)
-        y_position = 800
-
-        pdf.drawString(100, y_position, "Список покупок:")
-        y_position -= 30
-
-        for ingredient in ingredients:
-            text_line = (
-                f"{ingredient['ingredient__name']} "
-                f"({ingredient['ingredient__measurement_unit']}) - "
-                f"{ingredient['total']}"
-            )
-            pdf.drawString(100, y_position, text_line)
-            y_position -= 20
-
-        pdf.save()
-        buffer.seek(0)
-
-        response = HttpResponse(buffer, content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="shopping_list.pdf"'
-        return response
 
     def get_serializer_class(self):
         """Определение необходимого сериализатора."""

@@ -1,7 +1,5 @@
 from rest_framework import serializers
 from rest_framework.serializers import (
-    CurrentUserDefault,
-    HiddenField,
     ModelSerializer,
     SerializerMethodField,
     ValidationError
@@ -87,11 +85,13 @@ class GetRecipeSerializer(serializers.ModelSerializer):
 
     def get_is_favorited(self, obj):
         user = self.context['request'].user
-        return user.favorites.filter(recipe=obj).exists() if user.is_authenticated else False
+        return user.favorites.filter(
+            recipe=obj).exists() if user.is_authenticated else False
 
     def get_is_in_shopping_cart(self, obj):
         user = self.context['request'].user
-        return user.shopping_carts.filter(recipe=obj).exists() if user.is_authenticated else False
+        return user.shopping_carts.filter(
+            recipe=obj).exists() if user.is_authenticated else False
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -166,7 +166,9 @@ class RecipeSerializer(serializers.ModelSerializer):
         recipe.tags.set(tags)
 
     def create(self, validated_data):
-        if 'request' not in self.context or self.context['request'].user.is_anonymous:
+        request = self.context.get('request')
+
+        if request is None or request.user.is_anonymous:
             raise NotAuthenticated(
                 detail="Authentication credentials were not provided.",
                 code='not_authenticated'

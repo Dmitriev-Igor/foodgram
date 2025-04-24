@@ -7,12 +7,8 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
 from .models import Subscription, User
-from .serializers import (
-    AvatarSerializer,
-    CustomSetPasswordSerializer,
-    GetSubscriptionSerializer,
-    MyUserSerializer,
-)
+from .serializers import (AvatarSerializer, CustomSetPasswordSerializer,
+                          GetSubscriptionSerializer, MyUserSerializer)
 
 
 class UserViewSet(UserViewSet):

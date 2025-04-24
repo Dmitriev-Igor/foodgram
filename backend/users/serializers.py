@@ -1,11 +1,13 @@
-from rest_framework import serializers
-from drf_extra_fields.fields import Base64ImageField
 from django.contrib.auth import get_user_model
-from .models import Subscription
-from recipes.models import Recipe
 from django.contrib.auth.password_validation import validate_password
 from djoser.serializers import UserCreateSerializer, UserSerializer
+from drf_extra_fields.fields import Base64ImageField
+from recipes.models import Recipe
+from rest_framework import serializers
 from rest_framework.validators import ValidationError
+
+from .models import Subscription
+
 User = get_user_model()
 
 

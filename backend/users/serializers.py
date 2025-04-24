@@ -1,19 +1,15 @@
+from rest_framework import serializers
+from drf_extra_fields.fields import Base64ImageField
 from django.contrib.auth import get_user_model
+from .models import Subscription
+from recipes.models import Recipe
 from django.contrib.auth.password_validation import validate_password
 from djoser.serializers import UserCreateSerializer, UserSerializer
-from drf_extra_fields.fields import Base64ImageField
-from recipes.models import Recipe
-from rest_framework import serializers
 from rest_framework.validators import ValidationError
-
-from .models import Subscription
-
 User = get_user_model()
 
 
 class MyUserSerializer(UserSerializer):
-    """Сериализатор для модели User с дополнительным полем подписки."""
-
     is_subscribed = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -29,7 +25,6 @@ class MyUserSerializer(UserSerializer):
         ]
 
     def get_is_subscribed(self, obj):
-        """Проверяет, подписан ли текущий пользователь на автора."""
         request = self.context.get('request')
         if not request or request.user.is_anonymous:
             return False
@@ -40,7 +35,6 @@ class MyUserSerializer(UserSerializer):
 
 
 class MyUserCreateSerializer(UserCreateSerializer):
-    """Сериализатор для создания пользователя."""
 
     class Meta:
         model = User
@@ -56,7 +50,6 @@ class MyUserCreateSerializer(UserCreateSerializer):
 
 
 class AvatarSerializer(MyUserSerializer):
-    """Сериализатор для обновления аватара пользователя."""
 
     avatar = Base64ImageField(
         max_length=None,
@@ -70,7 +63,6 @@ class AvatarSerializer(MyUserSerializer):
         fields = ('avatar',)
 
     def validate(self, data):
-        """Проверяет наличие поля avatar."""
         if not data.get('avatar'):
             raise ValidationError(
                 {'avatar': 'Нет поля "Аватар"!'}
@@ -79,8 +71,6 @@ class AvatarSerializer(MyUserSerializer):
 
 
 class RecipeMinifiedSerializer(serializers.ModelSerializer):
-    """Упрощенный сериализатор для модели Recipe."""
-
     class Meta:
         model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')
@@ -101,7 +91,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, data):
-        """Проверяет, что пользователь не подписывается на себя."""
         if data['subscriber'] == data['author']:
             raise ValidationError(
                 {'Подписки': 'Нельзя подписаться на самого себя!'}
@@ -110,7 +99,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
 
 class GetSubscriptionSerializer(MyUserSerializer):
-    """Сериализатор для получения подписок с рецептами."""
+    """Сериализатор получения подписок."""
 
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
@@ -130,7 +119,6 @@ class GetSubscriptionSerializer(MyUserSerializer):
         )
 
     def get_recipes(self, object):
-        """Возвращает рецепты автора с учетом лимита."""
         request = self.root.context.get('request')
         if request is not None:
             count = request.query_params.get('recipes_limit')
@@ -145,18 +133,14 @@ class GetSubscriptionSerializer(MyUserSerializer):
         ).data
 
     def get_recipes_count(self, object):
-        """Возвращает количество рецептов автора."""
         return object.recipes.count()
 
 
 class CustomSetPasswordSerializer(serializers.Serializer):
-    """Сериализатор для смены пароля."""
-
     current_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
 
     def validate(self, data):
-        """Проверяет текущий пароль и валидирует новый."""
         user = self.context['request'].user
         if not user.check_password(data['current_password']):
             raise ValidationError({"current_password": "Неверный пароль"})

@@ -137,9 +137,8 @@ DJOSER = {
     'TOKEN_MODEL': 'rest_framework.authtoken.models.Token',
     'HIDE_USERS': False,
     'SERIALIZERS': {
-        'user_create': 'users.serializers.MyUserCreateSerializer',
-        'user': 'users.serializers.MyUserSerializer',
-        'current_user': 'users.serializers.MyUserSerializer',
+        'user': 'users.serializers.UsersSerializer',
+        'current_user': 'users.serializers.UsersSerializer',
     },
     'PERMISSIONS': {
         'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],

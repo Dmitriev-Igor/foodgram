@@ -1,62 +1,43 @@
+from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
-from djoser.views import UserViewSet
-from recipes.permissions import AnonimOrAuthenticatedReadOnly
+from djoser.views import UserViewSet as DjoserUserViewSet
+from recipes.permissions import IsAuthorOrReadOnly
 from rest_framework import permissions, status
 from rest_framework.decorators import action
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
-from .models import Subscription, User
-from .serializers import (AvatarSerializer, CustomSetPasswordSerializer,
-                          GetSubscriptionSerializer, MyUserSerializer)
+from .models import Subscription
+from .serializers import (AvatarSerializer,
+                          GetSubscriptionSerializer, UsersSerializer)
+
+User = get_user_model()
 
 
-class UserViewSet(UserViewSet):
+class CustomPagination(PageNumberPagination):
+    page_size_query_param = 'limit'
+    max_page_size = 100
+
+
+class UserViewSet(DjoserUserViewSet):
     queryset = User.objects.all()
-    serializer_class = MyUserSerializer
-    permission_classes = (AnonimOrAuthenticatedReadOnly,)
-    pagination_class = LimitOffsetPagination
+    serializer_class = UsersSerializer
+    permission_classes = (IsAuthorOrReadOnly,)
+    pagination_class = CustomPagination
 
     @action(
         detail=False,
-        methods=['get', 'patch'],
+        methods=['get'],
         url_path='me',
         url_name='me',
         permission_classes=(permissions.IsAuthenticated,),
     )
     def get_me(self, request):
-        if request.method == 'PATCH':
-            serializer = MyUserSerializer(
-                request.user,
-                data=request.data,
-                partial=True,
-                context={'request': request},
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        serializer = MyUserSerializer(
+        serializer = UsersSerializer(
             request.user,
             context={'request': request},
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-    @action(
-        detail=False,
-        methods=['post'],
-        url_path='set_password',
-        permission_classes=(permissions.IsAuthenticated,),
-    )
-    def set_password(self, request):
-        serializer = CustomSetPasswordSerializer(
-            data=request.data,
-            context={'request': request}
-        )
-        if serializer.is_valid(raise_exception=True):
-            self.request.user.set_password(serializer.data["new_password"])
-            self.request.user.save()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(
         detail=False,
@@ -76,7 +57,6 @@ class UserViewSet(UserViewSet):
 
             user.avatar.delete()
             user.save()
-
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         serializer = AvatarSerializer(
@@ -87,11 +67,7 @@ class UserViewSet(UserViewSet):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
-        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(
         detail=True,
@@ -110,33 +86,33 @@ class UserViewSet(UserViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            if Subscription.objects.filter(
-                    subscriber=request.user, author=author).exists():
+            _, created = Subscription.objects.get_or_create(
+                subscriber=request.user,
+                author=author
+            )
+            if not created:
                 return Response(
                     {'errors': 'Вы уже подписаны на этого пользователя'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            Subscription.objects.create(subscriber=request.user, author=author)
             serializer = GetSubscriptionSerializer(
                 author,
                 context={'request': request}
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        # DELETE метод
-        subscription = Subscription.objects.filter(
+        deleted_count, _ = Subscription.objects.filter(
             subscriber=request.user,
             author=author
-        ).first()
+        ).delete()
 
-        if not subscription:
+        if deleted_count == 0:
             return Response(
                 {'errors': 'Подписка не найдена'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        subscription.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(

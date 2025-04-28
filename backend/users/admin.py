@@ -1,11 +1,15 @@
 from django.contrib import admin
+from django.contrib.auth import get_user_model  # Импортируем get_user_model
+from django.contrib.auth.admin import UserAdmin  # Наследуемся от UserAdmin
 from django.utils.html import format_html
 
-from .models import Subscription, User
+from .models import Subscription
+
+User = get_user_model()  # Получаем модель пользователя через get_user_model()
 
 
 @admin.register(User)
-class UserAdmin(admin.ModelAdmin):
+class CustomUserAdmin(UserAdmin):  # Наследуемся от UserAdmin вместо ModelAdmin
     """Админ-панель для модели User."""
 
     list_display = (
@@ -28,6 +32,7 @@ class UserAdmin(admin.ModelAdmin):
     )
     readonly_fields = ('last_login', 'date_joined')
 
+    @admin.display(description="Аватар")  # Используем декоратор для описания
     def avatar_preview(self, obj):
         """Отображает миниатюру аватара в админ-панели."""
         if obj.avatar:
@@ -36,8 +41,6 @@ class UserAdmin(admin.ModelAdmin):
                 obj.avatar.url
             )
         return "Нет аватара"
-
-    avatar_preview.short_description = "Аватар"
 
 
 @admin.register(Subscription)

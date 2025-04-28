@@ -1,4 +1,5 @@
 from django_filters import rest_framework as filters
+
 from recipes.models import Ingredient, Recipe
 
 
@@ -30,10 +31,10 @@ class RecipeFilter(filters.FilterSet):
         """Фильтрует рецепты по наличию в избранном."""
         if value and self.request.user.is_authenticated:
             return queryset.filter(favorites__user=self.request.user)
-        return queryset.exclude(image__isnull=True).exclude(image__exact='')
+        return queryset
 
     def get_is_in_shopping_cart(self, queryset, name, value):
         """Фильтрует рецепты по наличию в списке покупок."""
         if value and self.request.user.is_authenticated:
             return queryset.filter(shopping_carts__user=self.request.user)
-        return queryset.exclude(image__isnull=True).exclude(image__exact='')
+        return queryset

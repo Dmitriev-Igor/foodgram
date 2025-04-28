@@ -1,18 +1,17 @@
-
-from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.http import Http404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
-
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from .filters import IngredientFilter, RecipeFilter
-from .models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+from .models import (Favorite, Ingredient, Recipe,
                      ShoppingCart, Tag)
-from .permissions import AuthorOrReadOnly
-from .serializers import (FavoriteSerializer, GetRecipeSerializer,
+from .permissions import IsAuthorOrReadOnly
+from .serializers import (FavoriteSerializer,
                           IngredientSerializer, RecipeMinifiedSerializer,
                           RecipeSerializer, ShoppingCartSerializer,
                           TagSerializer)
@@ -35,80 +34,83 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
-    permission_classes = (AuthorOrReadOnly,)
+    permission_classes = (IsAuthorOrReadOnly, IsAuthenticatedOrReadOnly)
     pagination_class = LimitOffsetPagination
     filter_backends = (DjangoFilterBackend, )
     filterset_class = RecipeFilter
 
-    @action(
-        detail=True,
-        methods=['post', 'delete'],
-        permission_classes=(permissions.IsAuthenticated,),
-        url_path='favorite'
-    )
-    def get_favorite(self, request, pk):
-        """Работа с избранным."""
-        try:
-            recipe_id = int(pk)
-        except ValueError:
+    def _handle_object_creation(self,
+                                request,
+                                pk,
+                                serializer_class,
+                                error_message):
+        """Общий метод для создания объектов (избранное/корзина)."""
+        recipe = get_object_or_404(Recipe, pk=pk)
+        serializer = serializer_class(
+            data={'user': request.user.id, 'recipe': recipe.id},
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            RecipeMinifiedSerializer(recipe).data,
+            status=status.HTTP_201_CREATED
+        )
+
+    def _handle_object_deletion(self, request, pk, model_class, error_message):
+        """Общий метод для удаления объектов (избранное/корзина)."""
+        recipe = get_object_or_404(Recipe, pk=pk)
+        deleted_count, _ = model_class.objects.filter(
+            user=request.user,
+            recipe=recipe
+        ).delete()
+
+        if deleted_count == 0:
             return Response(
-                {"error": "ID рецепта должен быть целым числом."},
+                {"error": error_message},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-        recipe = get_object_or_404(Recipe, pk=recipe_id)
+    @action(detail=True, methods=['post'], url_path='favorite')
+    def add_favorite(self, request, pk):
+        """Добавление рецепта в избранное."""
+        return self._handle_object_creation(
+            request,
+            pk,
+            FavoriteSerializer,
+            "Рецепт уже в избранном"
+        )
 
-        if request.method == 'POST':
-            # Логика добавления в избранное
-            serializer = FavoriteSerializer(
-                data={'user': request.user.id, 'recipe': recipe.id}
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(
-                RecipeMinifiedSerializer(recipe).data,
-                status=status.HTTP_201_CREATED
-            )
-        else:
-            # Логика удаления из избранного
-            if not Favorite.objects.filter(
-                    user=request.user, recipe=recipe).exists():
-                return Response(
-                    {"error": "Рецепта нет в избранном."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            Favorite.objects.filter(user=request.user, recipe=recipe).delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+    @add_favorite.mapping.delete
+    def remove_favorite(self, request, pk):
+        """Удаление рецепта из избранного."""
+        return self._handle_object_deletion(
+            request,
+            pk,
+            Favorite,
+            "Рецепта нет в избранном"
+        )
 
-    @action(
-        detail=True,
-        methods=['post', 'delete'],
-        url_path='shopping_cart',
-        permission_classes=(permissions.IsAuthenticated,)
-    )
-    def get_shopping_cart(self, request, pk):
-        """Работа со списком покупок."""
-        recipe = get_object_or_404(Recipe, pk=pk)
-        if request.method == 'POST':
-            serializer = ShoppingCartSerializer(
-                data={'user': request.user.id, 'recipe': recipe.id}
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            shopping_cart_serializer = RecipeMinifiedSerializer(recipe)
-            return Response(
-                shopping_cart_serializer.data, status=status.HTTP_201_CREATED
-            )
-        else:
-            if not ShoppingCart.objects.filter(
-                    user=request.user, recipe=recipe).exists():
-                return Response(
-                    {"error": "Рецепта нет в списке покупок."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            ShoppingCart.objects.filter(
-                user=request.user, recipe=recipe).delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+    @action(detail=True, methods=['post'], url_path='shopping_cart')
+    def add_shopping_cart(self, request, pk):
+        """Добавление рецепта в список покупок."""
+        return self._handle_object_creation(
+            request,
+            pk,
+            ShoppingCartSerializer,
+            "Рецепт уже в списке покупок"
+        )
+
+    @add_shopping_cart.mapping.delete
+    def remove_shopping_cart(self, request, pk):
+        """Удаление рецепта из списка покупок."""
+        return self._handle_object_deletion(
+            request,
+            pk,
+            ShoppingCart,
+            "Рецепта нет в списке покупок"
+        )
 
     @action(
         detail=False,
@@ -120,21 +122,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Загрузка списка покупок."""
         return get_shopping_cart_textfile(request.user)
 
-    def _get_shopping_cart_ingredients(self):
-        """Получение агрегированного списка ингредиентов"""
-        return RecipeIngredient.objects.filter(
-            recipe__shoppingcart__user=self.request.user
-        ).values(
-            'ingredient__name',
-            'ingredient__measurement_unit'
-        ).annotate(total=Sum('amount'))
-
-    def get_serializer_class(self):
-        """Определение необходимого сериализатора."""
-        if self.request.method == 'GET':
-            return GetRecipeSerializer
-        return RecipeSerializer
-
     @action(
         detail=True,
         methods=['get'],
@@ -142,9 +129,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(permissions.AllowAny,)
     )
     def get_short_link(self, request, *args, **kwargs):
-        short_link = request.build_absolute_uri()
+        recipe_id = kwargs.get('recipe_id')
+        relative_link = f'/api/recipes/{recipe_id}/get-link/'
+        short_link = request.build_absolute_uri(relative_link)
         short_link = short_link.replace('/api/recipes/', '/t/')
         short_link = short_link.replace('/get-link/', '/')
+
         return JsonResponse({'short-link': short_link})
 
 
@@ -156,6 +146,12 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 def short_link_view(request, *args, **kwargs):
-    path = request.build_absolute_uri()
-    path = path.replace('/t/', '/api/recipes/')
-    return redirect(path)
+    recipe_id = kwargs.get('recipe_id')
+
+    try:
+        recipe = get_object_or_404(Recipe, id=recipe_id)
+        path = f'/recipes/{recipe.id}/'
+        return redirect(path)
+
+    except Http404:
+        return redirect('/404/')

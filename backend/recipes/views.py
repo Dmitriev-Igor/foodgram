@@ -1,20 +1,18 @@
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.http import Http404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.response import Response
+
 from .filters import IngredientFilter, RecipeFilter
-from .models import (Favorite, Ingredient, Recipe,
-                     ShoppingCart, Tag)
+from .models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from .permissions import IsAuthorOrReadOnly
-from .serializers import (FavoriteSerializer,
-                          IngredientSerializer, RecipeMinifiedSerializer,
-                          RecipeSerializer, ShoppingCartSerializer,
-                          TagSerializer)
+from .serializers import (FavoriteSerializer, IngredientSerializer,
+                          RecipeMinifiedSerializer, RecipeSerializer,
+                          ShoppingCartSerializer, TagSerializer)
 from .utils import get_shopping_cart_textfile
 
 

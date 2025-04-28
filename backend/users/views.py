@@ -8,8 +8,8 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from .models import Subscription
-from .serializers import (AvatarSerializer,
-                          GetSubscriptionSerializer, UsersSerializer)
+from .serializers import (AvatarSerializer, GetSubscriptionSerializer,
+                          UsersSerializer)
 
 User = get_user_model()
 

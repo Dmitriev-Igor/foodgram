@@ -3,13 +3,8 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 from django.db.models import Q
 
-from .constants import (
-    EMAIL_MAX_LENGTH,
-    USERNAME_MAX_LENGTH,
-    NAME_MAX_LENGTH,
-    AVATAR_UPLOAD_PATH,
-    TEXT_TRUNCATION,
-)
+from .constants import (AVATAR_UPLOAD_PATH, EMAIL_MAX_LENGTH, NAME_MAX_LENGTH,
+                        TEXT_TRUNCATION, USERNAME_MAX_LENGTH)
 
 
 class User(AbstractUser):

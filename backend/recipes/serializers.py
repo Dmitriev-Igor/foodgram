@@ -1,12 +1,11 @@
 from django.db import transaction
 from drf_extra_fields.fields import Base64ImageField
-
 from rest_framework import serializers
 from rest_framework.serializers import (ModelSerializer, SerializerMethodField,
                                         ValidationError)
 from rest_framework.validators import UniqueTogetherValidator
-
 from users.serializers import UsersSerializer
+
 from .models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                      ShoppingCart, Tag)
 

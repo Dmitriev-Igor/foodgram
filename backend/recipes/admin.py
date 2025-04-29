@@ -16,10 +16,10 @@ class TagAdmin(admin.ModelAdmin):
     save_on_top = True
     list_per_page = 20
 
+    @admin.display(description='Рецептов с тегом')
     def recipe_count(self, obj):
         """Возвращает количество рецептов с тегом."""
         return obj.recipes.count()
-    recipe_count.short_description = 'Рецептов с тегом'
 
 
 @admin.register(Ingredient)
@@ -31,10 +31,10 @@ class IngredientAdmin(admin.ModelAdmin):
     list_filter = ('measurement_unit',)
     ordering = ('name',)
 
+    @admin.display(description='Используется в рецептах')
     def recipe_count(self, obj):
         """Возвращает количество рецептов с ингредиентом."""
         return obj.recipeingredients.count()
-    recipe_count.short_description = 'Используется в рецептах'
 
     def save_model(self, request, obj, form, change):
         """Проверяет уникальность ингредиента перед сохранением."""
@@ -61,11 +61,12 @@ class RecipeAdmin(admin.ModelAdmin):
     save_on_top = True
     list_per_page = 25
 
+    @admin.display(description='В избранном')
     def favorite_count(self, obj):
         """Возвращает количество добавлений рецепта в избранное."""
         return obj.favorites.count()
-    favorite_count.short_description = 'В избранном'
 
+    @admin.display(description='Превью')
     def image_preview(self, obj):
         """Отображает миниатюру изображения рецепта."""
         if obj.image:
@@ -87,9 +88,9 @@ class RecipeIngredientAdmin(admin.ModelAdmin):
 class ShoppingCartAdmin(admin.ModelAdmin):
     """Админ-панель для модели ShoppingCart."""
 
-    list_display = ('user', 'recipe', 'added_at')
+    list_display = ('user', 'recipe', 'created_at')
     autocomplete_fields = ['user', 'recipe']
-    date_hierarchy = 'added_at'
+    date_hierarchy = 'created_at'
     list_per_page = 50
 
 

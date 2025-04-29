@@ -91,7 +91,7 @@ class GetSubscriptionSerializer(UsersSerializer):
 
         recipes = obj.recipes.all()
         return RecipeMinifiedSerializer(
-            recipes[:count] if count else recipes,
+            recipes[:count],
             many=True,
             context=self.context
         ).data

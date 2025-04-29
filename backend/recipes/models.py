@@ -142,10 +142,11 @@ class RecipeIngredient(models.Model):
 class UserRecipe(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         abstract = True
-        ordering = ('-recipe__created_at',)
+        ordering = ('-created_at',)
         constraints = (
             models.UniqueConstraint(
                 fields=('recipe', 'user'),
@@ -155,8 +156,6 @@ class UserRecipe(models.Model):
 
 
 class Favorite(UserRecipe):
-    created_at = models.DateTimeField(auto_now_add=True)
-
     class Meta(UserRecipe.Meta):
         verbose_name = 'Избранное'
         verbose_name_plural = 'Избранное'
@@ -167,8 +166,6 @@ class Favorite(UserRecipe):
 
 
 class ShoppingCart(UserRecipe):
-    added_at = models.DateTimeField(auto_now_add=True)
-
     class Meta(UserRecipe.Meta):
         verbose_name = 'Список покупок'
         verbose_name_plural = 'Списки покупок'

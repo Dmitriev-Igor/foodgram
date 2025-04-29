@@ -127,13 +127,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(permissions.AllowAny,)
     )
     def get_short_link(self, request, *args, **kwargs):
-        recipe_id = kwargs.get('recipe_id')
-        relative_link = f'/api/recipes/{recipe_id}/get-link/'
+        recipe_id = kwargs.get('pk')
+        relative_link = f'/t/{recipe_id}/'
         short_link = request.build_absolute_uri(relative_link)
-        short_link = short_link.replace('/api/recipes/', '/t/')
-        short_link = short_link.replace('/get-link/', '/')
 
-        return JsonResponse({'short-link': short_link})
+        return JsonResponse({'short_link': short_link})
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):

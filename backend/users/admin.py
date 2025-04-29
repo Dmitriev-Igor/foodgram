@@ -1,15 +1,15 @@
 from django.contrib import admin
-from django.contrib.auth import get_user_model  # Импортируем get_user_model
-from django.contrib.auth.admin import UserAdmin  # Наследуемся от UserAdmin
+from django.contrib.auth import get_user_model
+from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
 
 from .models import Subscription
 
-User = get_user_model()  # Получаем модель пользователя через get_user_model()
+User = get_user_model()
 
 
 @admin.register(User)
-class CustomUserAdmin(UserAdmin):  # Наследуемся от UserAdmin вместо ModelAdmin
+class UsersAdmin(UserAdmin):
     """Админ-панель для модели User."""
 
     list_display = (

@@ -4,7 +4,7 @@ from djoser.views import UserViewSet as DjoserUserViewSet
 from recipes.permissions import IsAuthorOrReadOnly
 from rest_framework import permissions, status
 from rest_framework.decorators import action
-from rest_framework.pagination import PageNumberPagination
+from core.pagination import LimitPageNumberPagination
 from rest_framework.response import Response
 
 from .models import Subscription
@@ -14,16 +14,11 @@ from .serializers import (AvatarSerializer, GetSubscriptionSerializer,
 User = get_user_model()
 
 
-class CustomPagination(PageNumberPagination):
-    page_size_query_param = 'limit'
-    max_page_size = 100
-
-
 class UserViewSet(DjoserUserViewSet):
     queryset = User.objects.all()
     serializer_class = UsersSerializer
     permission_classes = (IsAuthorOrReadOnly,)
-    pagination_class = CustomPagination
+    pagination_class = LimitPageNumberPagination
 
     @action(
         detail=False,

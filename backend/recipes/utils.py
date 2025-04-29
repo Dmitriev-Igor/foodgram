@@ -4,6 +4,7 @@ from datetime import date
 
 from django.db.models import Sum
 from django.http import HttpResponse
+
 from recipes.models import RecipeIngredient
 
 

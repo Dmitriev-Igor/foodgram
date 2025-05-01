@@ -21,6 +21,11 @@ services:
     restart: always
 
   backend:
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     container_name: foodgram_backend
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
     environment:
@@ -39,8 +44,8 @@ services:
     container_name: foodgram_frontend
     image: dmitrievigor/foodgram_frontend:latest
     volumes:
-      - static:/static/
-    command: sh -c "cp -r /app/build/. /static/"
+      - static:/app/static/frontend/
+    command: sh -c "cp -r /app/build/. /app/static/frontend/"
     restart: on-failure
 
   nginx:
@@ -50,7 +55,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - ../docs/:/usr/share/nginx/html/api/docs/
+      - ./docs:/usr/share/nginx/html/api/docs
       - static:/app/static
       - media:/app/media
     depends_on:

@@ -22,6 +22,9 @@ services:
 
   backend:
     container_name: foodgram_backend
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
     depends_on:
       db:
         condition: service_healthy
@@ -30,8 +33,6 @@ services:
     volumes:
       - static:/app/static/
       - media:/app/media/
-    ports:
-      - "8000:8000" 
     restart: always
 
   frontend:
@@ -39,7 +40,8 @@ services:
     image: dmitrievigor/foodgram_frontend:latest
     volumes:
       - static:/static/
-    command: sh -c "cp -r /app/build/. /static/ && sleep infinity"
+    command: sh -c "cp -r /app/build/. /static/"
+    restart: on-failure
 
   nginx:
     container_name: foodgram_nginx

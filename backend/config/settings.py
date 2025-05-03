@@ -117,6 +117,8 @@ STATIC_ROOT = '/app/static/backend/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = '/app/media/'
 
+CSV_FILES_DIR = os.path.join(BASE_DIR, 'data')
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {

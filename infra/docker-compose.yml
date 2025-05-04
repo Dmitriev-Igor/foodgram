@@ -5,6 +5,9 @@ volumes:
   static:
   media:
 
+networks:
+  foodgram_network:
+    driver: bridge
 
 services:
   db:
@@ -13,38 +16,52 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data/
     env_file: .env
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB" ]
       interval: 5s
       timeout: 5s
       retries: 5
     restart: always
+    networks:
+      - foodgram_network
 
   backend:
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     container_name: foodgram_backend
+    image: dmitrievigor/foodgram_backend:latest
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=db
     depends_on:
       db:
         condition: service_healthy
-    image: dmitrievigor/foodgram_backend:latest
     env_file: .env
     volumes:
       - static:/app/static/backend/
       - media:/app/media/
     restart: always
+    networks:
+      - foodgram_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   frontend:
     container_name: foodgram-front
     build: ../frontend
     volumes:
       - ../frontend/:/app/result_build/
+    networks:
+      - foodgram_network
 
   nginx:
     container_name: foodgram_nginx
@@ -60,3 +77,5 @@ services:
       - backend
       - frontend
     restart: always
+    networks:
+      - foodgram_network

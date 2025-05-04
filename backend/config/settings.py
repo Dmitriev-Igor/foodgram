@@ -66,7 +66,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-
 if os.getenv('USE_SQLITE', 'False') == 'True':
     DATABASES = {
         'default': {

@@ -13,7 +13,7 @@ class Command(BaseCommand):
         json_path = os.path.join(JSON_FILES_DIR, json_file)
         try:
             with open(json_path, encoding='utf-8') as file:
-                data = json.load(file)  # Загружаем данные из JSON
+                data = json.load(file)
                 ingredients = [
                     Ingredient(
                         name=item['name'],

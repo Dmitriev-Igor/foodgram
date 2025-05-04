@@ -1,9 +1,9 @@
+from core.pagination import LimitPageNumberPagination
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
@@ -33,7 +33,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     permission_classes = (IsAuthorOrReadOnly, IsAuthenticatedOrReadOnly)
-    pagination_class = LimitOffsetPagination
+    pagination_class = LimitPageNumberPagination
     filter_backends = (DjangoFilterBackend, )
     filterset_class = RecipeFilter
 
@@ -128,7 +128,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def get_short_link(self, request, *args, **kwargs):
         recipe_id = kwargs.get('pk')
-        relative_link = f'/t/{recipe_id}/'
+        relative_link = f'/s/{recipe_id}/'
         short_link = request.build_absolute_uri(relative_link)
 
         return JsonResponse({'short_link': short_link})

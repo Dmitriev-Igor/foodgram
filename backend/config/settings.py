@@ -66,6 +66,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+
 if os.getenv('USE_SQLITE', 'False') == 'True':
     DATABASES = {
         'default': {
@@ -84,6 +85,8 @@ else:
             'PORT': os.getenv('DB_PORT', 5432),
         }
     }
+
+JSON_FILES_DIR = os.path.join(BASE_DIR, 'data')
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -112,12 +115,10 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
-STATIC_ROOT = '/app/static/backend/'
+STATIC_ROOT = '/backend_static/static/'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/app/media/'
-
-CSV_FILES_DIR = os.path.join(BASE_DIR, 'data')
+MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

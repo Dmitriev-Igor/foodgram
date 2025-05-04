@@ -7,110 +7,71 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out
-        uses: actions/checkout@v3
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.9
-      
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8==6.0.0 flake8-isort==6.0.0
-          pip install -r ./backend/requirements.txt
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 pep8-naming flake8-broken-line flake8-return flake8-isort
+        pip install -r backend/requirements.txt
 
-      - name: Test with flake8
-        run: |
-          python -m flake8 backend/
-
+    - name: Test with flake8
+      run: |
+        python -m flake8 backend
 
   build_and_push_to_docker_hub:
-    name: Push Docker image to DockerHub
+    name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     needs: tests
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
     steps:
-      - name: Check out
-        uses: actions/checkout@v3
-
+      - name: Check out the repo
+        uses: actions/checkout@v2
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
+        uses: docker/setup-buildx-action@v1
       - name: Login to Docker
-        uses: docker/login-action@v2
+        uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Push to DockerHub backend
-        uses: docker/build-push-action@v4
+      - name: Push to Docker Hub
+        uses: docker/build-push-action@v2
         with:
-          context: ./backend/
+          context: ./backend
+          file: ./backend/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/food_back:latest
-
-      - name: Push to Docker Hub frontend
-        uses: docker/build-push-action@v4
-        with:
-          context: ./frontend/
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/food_front:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/foodgram-project:latest
 
   deploy:
     runs-on: ubuntu-latest
     needs: build_and_push_to_docker_hub
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
     steps:
-      - name: Check out
-        uses: actions/checkout@v3
-
-      - name: Create .env on server
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          script: |
-            echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" > ~/infra/.env
-            echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> ~/infra/.env
-            echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> ~/infra/.env
-
-
-      - name: Copy file via ssh infra
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USER }}
-          key: ${{ secrets.SSH_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "infra/.env"
-          target: "~/infra/"
-
-      - name: Copy file via ssh docs
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USER }}
-          key: ${{ secrets.SSH_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "docs/*"
-          target: "~"
-
       - name: executing remote ssh commands to deploy
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          command_timeout: 200m
           script: |
-            cd infra
-            sudo docker compose down
-            sudo docker compose pull
-            sudo docker compose up -d
-            sudo docker compose exec backend python manage.py migrate
-            sudo docker compose exec backend python manage.py collectstatic --no-input
-
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/foodgram_frontend
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/foodgram-project
+            sudo docker-compose stop
+            sudo docker-compose rm backend
+            rm .env
+            touch .env
+            echo DB_ENGINE=${{ secrets.DB_ENGINE }} >> .env
+            echo DB_NAME=${{ secrets.DB_NAME }} >> .env
+            echo POSTGRES_USER=${{ secrets.POSTGRES_USER }} >> .env
+            echo POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} >> .env
+            echo DB_HOST=${{ secrets.DB_HOST }} >> .env
+            echo DB_PORT=${{ secrets.DB_PORT }} >> .env
+            echo DJ_SECRET_KEY=${{ secrets.DJ_SECRET_KEY }} >> .env
+            sudo docker-compose up -d
 
   send_message:
     runs-on: ubuntu-latest

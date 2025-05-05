@@ -26,6 +26,11 @@ services:
 
   backend:
     container_name: foodgram_backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     image: dmitrievigor/foodgram_backend:latest # Используем переменную из .env
     command: >
       sh -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000"

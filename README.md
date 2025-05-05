@@ -81,4 +81,4 @@ ALLOWED_HOSTS=localhost,127.0.0.1,foodgram25.duckdns.org
 
 Развернутый проект
 Проект доступен по адресу:
-🔗 https://foodgram25.duckdns.org
+https://foodgram25.duckdns.org

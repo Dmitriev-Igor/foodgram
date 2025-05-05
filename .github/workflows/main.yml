@@ -83,16 +83,23 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_and_push_to_docker_hub, build_frontend_and_push_to_docker_hub]
     steps:
-      - name: Transfer .env and compose files
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Transfer files via SCP
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "infra/*,.env"  # Добавляем .env в передаваемые файлы
+          source: "infra/*,docs/*,.env"  # Правильный формат для множества файлов
           target: "/home/${{ secrets.SSH_USERNAME }}/infra/"
-          
+          strip_components: 1  # Удаление лишних родительских директорий
+          overwrite: true
+
       - name: Execute deployment commands
         uses: appleboy/ssh-action@master
         with:
@@ -101,28 +108,23 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
-            cd infra
-            
-            # Создаем .env если его нет
-            if [ ! -f .env ]; then
-              touch .env
-              echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
-              echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
-              echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
-              echo "DB_HOST=db" >> .env
-              echo "DB_PORT=5432" >> .env
-              echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
-            fi
-            
+            mkdir -p ~/infra
+            cd ~/infra
+          
+            # Создаем .env из секретов
+            echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" > .env
+            echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+            echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
+            echo "DB_HOST=db" >> .env
+            echo "DB_PORT=5432" >> .env
+            echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+          
             # Docker commands
             docker compose down
             docker compose pull
             docker compose up -d --build
-            
-            # Wait for DB to be ready
-            sleep 20
-            
-            # Migrations
+          
+            sleep 20  # Ожидание инициализации БД
             docker compose exec backend python manage.py migrate
             docker compose exec backend python manage.py collectstatic --no-input
 

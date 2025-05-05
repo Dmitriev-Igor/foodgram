@@ -5,6 +5,7 @@ on: push
 jobs:
   tests:
     runs-on: ubuntu-latest
+
     steps:
       - name: Check out
         uses: actions/checkout@v3
@@ -19,29 +20,27 @@ jobs:
           python -m pip install --upgrade pip
           pip install flake8==6.0.0 flake8-isort==6.0.0
           pip install -r ./backend/requirements.txt
-          
       - name: Test with flake8
         run: |
           python -m flake8 backend/
-
   build_and_push_to_docker_hub:
-    name: Push Backend Image
+    name: Push Docker image to DockerHub
     runs-on: ubuntu-latest
     needs: tests
     steps:
-      - name: Check out
+      - name: Check out the repo
         uses: actions/checkout@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Login to Docker Hub
+      - name: Login to Docker
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push Backend
+      - name: Push to DockerHub backend
         uses: docker/build-push-action@v4
         with:
           context: ./backend/
@@ -49,23 +48,19 @@ jobs:
           tags: ${{ secrets.DOCKER_USERNAME }}/foodgram_backend:latest
 
   build_frontend_and_push_to_docker_hub:
-    name: Push Frontend Image
+    name: Push frontend Docker image to DockerHub
     runs-on: ubuntu-latest
-    needs: tests  # Добавляем зависимость от тестов
     steps:
-      - name: Check out
+      - name: Check out the repo
         uses: actions/checkout@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-
-      - name: Login to Docker Hub
+      - name: Login to Docker
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and Push Frontend
+      - name: Push to DockerHub
         uses: docker/build-push-action@v4
         with:
           context: ./frontend/
@@ -74,12 +69,12 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [build_and_push_to_docker_hub, build_frontend_and_push_to_docker_hub]  # Ожидаем оба образа
+    needs: build_and_push_to_docker_hub
     steps:
       - name: Check out
         uses: actions/checkout@v3
 
-      - name: Copy infra files
+      - name: Copy file via ssh infra
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOST }}
@@ -87,47 +82,40 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           source: "infra/*"
-          target: "~/infra/"
+          target: "~"
 
-      - name: Create .env file from secrets
-        run: |
-          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" > .env
-          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
-          echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
-          # Добавьте другие переменные при необходимости
-
-      - name: Copy .env to server
+      - name: Copy file via ssh docs
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: ".env"
-          target: "~/infra/"
+          source: "docs/*"
+          target: "~"
 
-      - name: Execute deployment commands
+      - name: executing remote ssh commands to deploy
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          command_timeout: 200m
           script: |
-            cd ~/infra
-            sudo docker compose down
-            sudo docker compose pull
-            sudo docker compose up -d --build
+            cd infra
+            sudo docker compose docker-compose.yml down
+            sudo docker compose docker-compose.yml pull
+            sudo docker compose docker-compose.yml up -d
             sudo docker compose exec backend python manage.py migrate
             sudo docker compose exec backend python manage.py collectstatic --no-input
-
   send_message:
     runs-on: ubuntu-latest
     needs: deploy
     steps:
-      - name: Send Telegram notification
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TELEGRAM_TO }}
-          token: ${{ secrets.TELEGRAM_TOKEN }}
-          message: "Deployment completed successfully! 🚀"
+    - name: Send message
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_TO }}
+        token: ${{ secrets.TELEGRAM_TOKEN }}
+        message: Ну сколько можно, а?

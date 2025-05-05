@@ -26,7 +26,7 @@ services:
 
   backend:
     container_name: foodgram_backend
-    image: ${DOCKER_USERNAME}/foodgram_backend:latest # Используем переменную из .env
+    image: dmitrievigor/foodgram_backend:latest # Используем переменную из .env
     command: >
       sh -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000"
     environment:

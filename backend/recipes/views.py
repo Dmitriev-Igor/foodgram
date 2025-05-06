@@ -1,5 +1,5 @@
 from core.pagination import LimitPageNumberPagination
-from django.http import Http404, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets

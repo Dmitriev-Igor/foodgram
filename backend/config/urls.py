@@ -7,8 +7,8 @@ from django.urls import include, path
 from recipes.views import short_link_view
 
 urlpatterns = [
+    path('s/<int:pk>/', short_link_view, name='short-link'),
     path('admin/', admin.site.urls),
-    path('s/<int:id>/', short_link_view),
     path('api/', include('recipes.urls')),
     path('api/', include('users.urls')),
     path('api/auth/', include('djoser.urls.authtoken')),

@@ -124,10 +124,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         detail=True,
         methods=['get'],
         url_path='get-link',
+        url_name='get-link',
         permission_classes=(permissions.AllowAny,)
     )
     def get_short_link(self, request, *args, **kwargs):
-        recipe_id = kwargs.get('recipe_id')
+        recipe_id = kwargs.get('pk')
         relative_link = f'/s/{recipe_id}/'
         short_link = request.build_absolute_uri(relative_link)
 
@@ -142,12 +143,6 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 def short_link_view(request, *args, **kwargs):
-    recipe_id = kwargs.get('recipe_id')
-
-    try:
-        recipe = get_object_or_404(Recipe, id=recipe_id)
-        path = f'/recipes/{recipe.id}/'
-        return redirect(path)
-
-    except Http404:
-        return redirect('/404/')
+    path = request.build_absolute_uri()
+    path = path.replace('/s/', '/recipes/')
+    return redirect(path)

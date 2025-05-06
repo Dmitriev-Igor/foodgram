@@ -127,7 +127,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(permissions.AllowAny,)
     )
     def get_short_link(self, request, *args, **kwargs):
-        recipe_id = kwargs.get('pk')
+        recipe_id = kwargs.get('recipe_id')
         relative_link = f'/s/{recipe_id}/'
         short_link = request.build_absolute_uri(relative_link)
 
